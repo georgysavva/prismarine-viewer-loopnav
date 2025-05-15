@@ -21,20 +21,20 @@ class WorldView extends EventEmitter {
     })
   }
 
-  listenToBot (bot) {
+    listenToBot (bot) {
     const worldView = this
     this.listeners[bot.username] = {
       // 'move': botPosition,
-      entitySpawn: function (e) {
-        if (e === bot.entity) return
-        worldView.emitter.emit('entity', { id: e.id, name: e.name, pos: e.position, width: e.width, height: e.height, username: e.username })
-      },
-      entityMoved: function (e) {
-        worldView.emitter.emit('entity', { id: e.id, pos: e.position, pitch: e.pitch, yaw: e.yaw })
-      },
-      entityGone: function (e) {
-        worldView.emitter.emit('entity', { id: e.id, delete: true })
-      },
+      // entitySpawn: function (e) {
+      //   if (e === bot.entity) return
+      //   worldView.emitter.emit('entity', { id: e.id, name: e.name, pos: e.position, width: e.width, height: e.height, username: e.username })
+      // },
+      // entityMoved: function (e) {
+      //   worldView.emitter.emit('entity', { id: e.id, pos: e.position, pitch: e.pitch, yaw: e.yaw })
+      // },
+      // entityGone: function (e) {
+      //   worldView.emitter.emit('entity', { id: e.id, delete: true })
+      // },
       chunkColumnLoad: function (pos) {
         worldView.loadChunk(pos)
       },
@@ -51,6 +51,7 @@ class WorldView extends EventEmitter {
     for (const id in bot.entities) {
       const e = bot.entities[id]
       if (e && e !== bot.entity) {
+        // console.log('emitting entity', e.name, e.id, e.position, e.width, e.height, e. username)
         this.emitter.emit('entity', { id: e.id, name: e.name, pos: e.position, width: e.width, height: e.height, username: e.username })
       }
     }
@@ -63,7 +64,7 @@ class WorldView extends EventEmitter {
     delete this.listeners[bot.username]
   }
 
-  async init (pos) {
+  init (pos) {
     const [botX, botZ] = chunkPos(pos)
 
     const positions = []
@@ -73,22 +74,21 @@ class WorldView extends EventEmitter {
     })
 
     this.lastPos.update(pos)
-    await this._loadChunks(positions)
+    this._loadChunks(positions)
   }
 
-  async _loadChunks (positions, sliceSize = 5, waitTime = 0) {
+  _loadChunks (positions, sliceSize = 5, waitTime = 0) {
     for (let i = 0; i < positions.length; i += sliceSize) {
-      await new Promise((resolve) => setTimeout(resolve, waitTime))
-      await Promise.all(positions.slice(i, i + sliceSize).map(p => this.loadChunk(p)))
+      positions.slice(i, i + sliceSize).map(p => this.loadChunk(p))
     }
   }
 
-  async loadChunk (pos) {
+  loadChunk (pos) {
     const [botX, botZ] = chunkPos(this.lastPos)
     const dx = Math.abs(botX - Math.floor(pos.x / 16))
     const dz = Math.abs(botZ - Math.floor(pos.z / 16))
     if (dx < this.viewDistance && dz < this.viewDistance) {
-      const column = await this.world.getColumnAt(pos)
+      const column = this.world.getColumnAt(pos)
       if (column) {
         const chunk = column.toJson()
         this.emitter.emit('loadChunk', { x: pos.x, z: pos.z, chunk })
@@ -102,10 +102,11 @@ class WorldView extends EventEmitter {
     delete this.loadedChunks[`${pos.x},${pos.z}`]
   }
 
-  async updatePosition (pos, force = false) {
+  updatePosition (pos, force = false) {
     const [lastX, lastZ] = chunkPos(this.lastPos)
     const [botX, botZ] = chunkPos(pos)
     if (lastX !== botX || lastZ !== botZ || force) {
+      // console.log('[world view] loading new chunks', botX, botZ)
       const newView = new ViewRect(botX, botZ, this.viewDistance)
       for (const coords of Object.keys(this.loadedChunks)) {
         const x = parseInt(coords.split(',')[0])
@@ -123,7 +124,7 @@ class WorldView extends EventEmitter {
         }
       })
       this.lastPos.update(pos)
-      await this._loadChunks(positions)
+      this._loadChunks(positions)
     } else {
       this.lastPos.update(pos)
     }
